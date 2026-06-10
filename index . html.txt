@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday | For Someone Special</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0c;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent-1: #ff3366; /* Rose Pink */
+            --accent-2: #7000ff; /* Violet */
+            --text-main: #ffffff;
+            --text-dim: #a0a0a0;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            cursor: none; /* Custom cursor implementation */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Controlled by JS during transitions */
+            height: 100vh;
+        }
+
+        /* --- Custom Cursor --- */
+        #cursor {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: difference;
+            transition: transform 0.2s ease;
+        }
+
+        /* --- Background Particles --- */
+        #canvas-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        /* --- Layout Structures --- */
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+
+        .scene.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* --- Glassmorphism Bento Grid --- */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: 150px;
+            gap: 15px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .bento-item {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .bento-item:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-1);
+        }
+
+        .item-large { grid-column: span 2; grid-row: span 2; }
+        .item-tall { grid-row: span 2; }
+
+        /* --- Typography --- */
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            line-height: 1.1;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .gradient-text {
+            background: linear-gradient(45deg, var(--accent-1), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+            max-width: 500px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* --- Buttons --- */
+        .btn-reveal {
+            margin-top: 2rem;
+            padding: 15px 40px;
+            border-radius: 50px;
+            border: none;
+            background: white;
+            color: black;
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-reveal:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 255, 255, 0.4);
+        }
+
+        /* --- Special Elements --- */
+        .photo-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: url('https://via.placeholder.com/150') center/cover;
+            border: 4px solid var(--accent-1);
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0px rgba(255, 51, 102, 0.4); }
+            100% { box-shadow: 0 0 0 30px rgba(255, 51, 102, 0); }
+        }
+
+        #progress-bar {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            z-index: 100;
+        }
+
+        #progress-fill {
+            width: 25%;
+            height: 100%;
+            background: var(--accent-1);
+            border-radius: 2px;
+            transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .bento-grid { grid-template-columns: 1fr; grid-auto-rows: auto; }
+            .item-large, .item-tall { grid-column: span 1; grid-row: span 1; }
+            h1 { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+    <canvas id="canvas-bg"></canvas>
+
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+
+    <!-- SCENE 1: THE ENTRY -->
+    <section class="scene active" id="scene-1">
+        <div class="photo-circle"></div>
+        <p style="text-transform: uppercase; letter-spacing: 3px; font-size: 0.8rem; margin-bottom: 10px;">To: The most amazing person</p>
+        <h1>Something <span class="gradient-text">Special</span> For You</h1>
+        <p>A digital journey through why you matter. Are you ready?</p>
+        <button class="btn-reveal" onclick="nextScene(2)">Unlock the Magic</button>
+    </section>
+
+    <!-- SCENE 2: THE REASONS -->
+    <section class="scene" id="scene-2">
+        <h1 style="font-size: 2.5rem; margin-bottom: 2rem;">A few things <span class="gradient-text">about you...</span></h1>
+        <div class="bento-grid">
+            <div class="bento-item item-large">
+                <h3 style="margin-bottom: 10px; color: var(--accent-1);">Your Energy</h3>
+                <p style="text-align: left;">The way you walk into a room and instantly make everything feel brighter. It's a superpower only you have.</p>
+            </div>
+            <div class="bento-item">
+                <h3 style="color: var(--accent-2);">The Smile</h3>
+                <p style="font-size: 0.9rem; margin-top: 5px;">Literally my favorite sight in the world.</p>
+            </div>
+            <div class="bento-item">
+                <h3 style="color: var(--accent-1);">The Heart</h3>
+                <p style="font-size: 0.9rem; margin-top: 5px;">Kinder than anyone I've ever met.</p>
+            </div>
+            <div class="bento-item item-tall">
+                <h3 style="margin-bottom: 10px; color: var(--accent-2);">Our Memories</h3>
+                <p style="text-align: left; font-size: 0.9rem;">From the late-night talks to the random laughs, every second with you is a core memory I treasure.</p>
+            </div>
+            <div class="bento-item">
+                <h3 style="color: #ffd700;">The Vibe</h3>
+                <p style="font-size: 0.9rem;">10/10. No notes. Perfection.</p>
+            </div>
+        </div>
+        <button class="btn-reveal" onclick="nextScene(3)">Next Chapter</button>
+    </section>
+
+    <!-- SCENE 3: THE BIG WISH -->
+    <section class="scene" id="scene-3">
+        <p style="margin-bottom: 10px;">The moment you've been waiting for...</p>
+        <h1 id="typewriter"></h1>
+        <p style="margin-top: 20px;">Today is all about celebrating the incredible human being you are. May your year be as aesthetic and beautiful as this page.</p>
+        <div style="margin-top: 30px; display: flex; gap: 20px;">
+             <button class="btn-reveal" style="background: var(--accent-1); color: white;" onclick="createConfetti()">Tap for Joy</button>
+             <button class="btn-reveal" onclick="nextScene(4)">One Last Thing</button>
+        </div>
+    </section>
+
+    <!-- SCENE 4: THE FINAL NOTE -->
+    <section class="scene" id="scene-4">
+        <h1 class="gradient-text">Forever & Always</h1>
+        <div style="max-width: 600px; background: var(--card-bg); padding: 40px; border-radius: 30px; border: 1px solid var(--glass-border); text-align: center;">
+            <p style="color: white; font-style: italic; font-size: 1.2rem;">"In a world of temporary things, you are a feeling I want to keep forever. Happy Birthday, [Name]. Thank you for being you."</p>
+        </div>
+        <p style="margin-top: 40px; font-size: 0.8rem; letter-spacing: 2px;">WITH LOVE, [YOUR NAME]</p>
+        <button class="btn-reveal" onclick="nextScene(1)" style="font-size: 0.7rem; padding: 10px 20px;">Start Over</button>
+    </section>
+
+    <script>
+        /** 1. CUSTOM CURSOR **/
+        const cursor = document.getElementById('cursor');
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        document.addEventListener('mousedown', () => cursor.style.transform = 'scale(0.8)');
+        document.addEventListener('mouseup', () => cursor.style.transform = 'scale(1)');
+
+        /** 2. PARTICLE SYSTEM (Background) **/
+        const canvas = document.getElementById('canvas-bg');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * 1 - 0.5;
+                this.color = Math.random() > 0.5 ? '#ff3366' : '#7000ff';
+                this.opacity = Math.random() * 0.5;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.y > canvas.height) this.y = 0;
+                if (this.y < 0) this.y = canvas.height;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.opacity;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function createParticles() {
+            for (let i = 0; i < 100; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+        createParticles();
+        animate();
+
+        /** 3. SCENE NAVIGATION **/
+        let currentScene = 1;
+        const totalScenes = 4;
+
+        function nextScene(index) {
+            document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+            document.getElementById(`scene-${index}`).classList.add('active');
+            
+            // Update Progress Bar
+            const fill = document.getElementById('progress-fill');
+            fill.style.width = (index / totalScenes) * 100 + '%';
+
+            // Special Action for Scene 3
+            if (index === 3) {
+                typeWriterEffect("Happy Birthday, Beautiful!", "typewriter");
+            }
+        }
+
+        /** 4. TYPEWRITER EFFECT **/
+        function typeWriterEffect(text, elementId) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = "";
+            let i = 0;
+            function type() {
+                if (i < text.length) {
+                    el.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, 100);
+                }
+            }
+            type();
+        }
+
+        /** 5. CONFETTI EFFECT (Simple implementation) **/
+        function createConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const p = new Particle();
+                p.size = Math.random() * 8 + 4;
+                p.speedY = Math.random() * -10 - 5;
+                p.speedX = (Math.random() - 0.5) * 10;
+                p.y = canvas.height;
+                p.opacity = 1;
+                particles.push(p);
+                // Remove confetti after a while
+                setTimeout(() => {
+                    particles.splice(particles.indexOf(p), 1);
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
